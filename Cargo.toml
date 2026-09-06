@@ -1,0 +1,7 @@
+[package]
+name = "afm-lint"
+version = "0.1.0"
+edition = "2021"
+authors = ["ashleyj21"]
+description = "A linter for Adobe Font Metrics (.afm) files with line/column diagnostics"
+license = "MIT"
