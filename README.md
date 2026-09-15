@@ -42,6 +42,12 @@ as a CI check on generated or vendored font metrics.
 
 ## What it checks right now
 
+- required header keys (`FontName`, `FontBBox`, `Ascender`, `Descender`)
+  are present before `StartCharMetrics`
+- `FontBBox` has exactly four numbers and its lower-left corner is
+  actually below and left of its upper-right corner
+- `Ascender`/`Descender` parse as numbers, with a note if their sign
+  looks backwards (ascender negative, descender positive)
 - duplicate character codes (`C`) in the CharMetrics table
 - negative advance widths (`WX`)
 - lines inside the CharMetrics table that don't parse as
@@ -51,10 +57,8 @@ as a CI check on generated or vendored font metrics.
 
 ## What it doesn't do yet
 
-It only looks at the CharMetrics section. It doesn't validate the
-header block (`FontName`, `FontBBox`, `Ascender`/`Descender`
-consistency, ...), and it doesn't touch `KernData` or `Composites` at
-all. See the roadmap for where this is headed.
+It doesn't touch `KernData` or `Composites` at all. See the roadmap
+for where this is headed.
 
 ## Format background
 
