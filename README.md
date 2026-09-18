@@ -54,11 +54,19 @@ as a CI check on generated or vendored font metrics.
   `key value ; key value ; ...`
 - a `StartCharMetrics` count that doesn't match the number of `C` lines
   actually present before `EndCharMetrics`
+- lines inside `StartKernPairs` / `EndKernPairs` that don't parse as
+  `KPX name1 name2 amount`
+- a `StartKernPairs` count that doesn't match the number of `KPX` lines
+  actually present before `EndKernPairs`
+- duplicate `KPX` pairs (same two glyph names kerned twice)
+- `KPX` pairs naming a glyph that isn't defined anywhere in
+  `CharMetrics`
 
 ## What it doesn't do yet
 
-It doesn't touch `KernData` or `Composites` at all. See the roadmap
-for where this is headed.
+It doesn't handle the `StartKernPairs0`/`StartKernPairs1` direction
+variants, `TrackKern`, or `Composites` at all. See the roadmap for
+where this is headed.
 
 ## Format background
 

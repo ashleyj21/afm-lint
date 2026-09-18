@@ -45,3 +45,41 @@ pub fn parse_fields(line: &str) -> Option<Vec<Field>> {
         Some(fields)
     }
 }
+
+// KernPairs lines look like:
+//   KPX A Aacute -20
+// i.e. plain whitespace-separated tokens, unlike the semicolon-joined
+// CharMetrics rows above. This splits a line into tokens and records the
+// 1-indexed byte column each one starts at.
+pub struct Token<'a> {
+    pub text: &'a str,
+    pub col: usize,
+}
+
+pub fn parse_tokens(line: &str) -> Vec<Token> {
+    let mut tokens = Vec::new();
+    let mut chars = line.char_indices().peekable();
+
+    while let Some(&(idx, ch)) = chars.peek() {
+        if ch.is_whitespace() {
+            chars.next();
+            continue;
+        }
+
+        let start = idx;
+        let mut end = idx + ch.len_utf8();
+        chars.next();
+
+        while let Some(&(next_idx, next_ch)) = chars.peek() {
+            if next_ch.is_whitespace() {
+                break;
+            }
+            end = next_idx + next_ch.len_utf8();
+            chars.next();
+        }
+
+        tokens.push(Token { text: &line[start..end], col: start + 1 });
+    }
+
+    tokens
+}
