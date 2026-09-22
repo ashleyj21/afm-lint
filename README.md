@@ -61,12 +61,20 @@ as a CI check on generated or vendored font metrics.
 - duplicate `KPX` pairs (same two glyph names kerned twice)
 - `KPX` pairs naming a glyph that isn't defined anywhere in
   `CharMetrics`
+- lines inside `StartComposites` / `EndComposites` that don't parse as
+  `CC name count ; PCC piece dx dy ; ...`
+- a `StartComposites` count that doesn't match the number of `CC`
+  lines actually present before `EndComposites`
+- a `CC` line whose declared part count doesn't match the number of
+  `PCC` entries that follow it
+- duplicate `CC` composite glyph definitions
+- `CC`/`PCC` entries naming a glyph that isn't defined anywhere in
+  `CharMetrics`
 
 ## What it doesn't do yet
 
 It doesn't handle the `StartKernPairs0`/`StartKernPairs1` direction
-variants, `TrackKern`, or `Composites` at all. See the roadmap for
-where this is headed.
+variants or `TrackKern`. See the roadmap for where this is headed.
 
 ## Format background
 

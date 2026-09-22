@@ -1,5 +1,5 @@
 use crate::diagnostic::Diagnostic;
-use crate::parser::{parse_fields, parse_tokens};
+use crate::parser::{parse_fields, parse_semicolon_segments, parse_tokens};
 use std::collections::HashMap;
 
 const REQUIRED_HEADER_KEYS: &[&str] = &["FontName", "FontBBox", "Ascender", "Descender"];
@@ -16,6 +16,11 @@ pub fn run(source: &str) -> Vec<Diagnostic> {
     let mut expected_kern_count: Option<(usize, usize, usize)> = None;
     let mut actual_kern_count = 0usize;
     let mut seen_kern_pairs: HashMap<(String, String), usize> = HashMap::new();
+
+    let mut in_composites = false;
+    let mut expected_composite_count: Option<(usize, usize, usize)> = None;
+    let mut actual_composite_count = 0usize;
+    let mut seen_composites: HashMap<String, usize> = HashMap::new();
 
     for (idx, line) in source.lines().enumerate() {
         let line_no = idx + 1;
@@ -71,6 +76,34 @@ pub fn run(source: &str) -> Vec<Diagnostic> {
                         format!(
                             "StartKernPairs declares {} pairs but {} were found before EndKernPairs",
                             expected, actual_kern_count
+                        ),
+                        exp_line,
+                        exp_col,
+                        expected.to_string().len(),
+                    ));
+                }
+            }
+            continue;
+        }
+
+        if content.starts_with("StartComposites") {
+            in_composites = true;
+            actual_composite_count = 0;
+            seen_composites.clear();
+            expected_composite_count = locate_value(content, "StartComposites", leading_ws)
+                .and_then(|(col, value)| value.parse::<usize>().ok().map(|count| (line_no, col, count)));
+            continue;
+        }
+
+        if content.starts_with("EndComposites") {
+            in_composites = false;
+            if let Some((exp_line, exp_col, expected)) = expected_composite_count.take() {
+                if expected != actual_composite_count {
+                    diagnostics.push(Diagnostic::new(
+                        "composite-count-mismatch",
+                        format!(
+                            "StartComposites declares {} composites but {} were found before EndComposites",
+                            expected, actual_composite_count
                         ),
                         exp_line,
                         exp_col,
@@ -208,6 +241,139 @@ pub fn run(source: &str) -> Vec<Diagnostic> {
                         line_no,
                         tokens[2].col,
                         name2.len(),
+                    ));
+                }
+            }
+        }
+
+        if in_composites {
+            if content.trim().is_empty() {
+                continue;
+            }
+
+            let segments = parse_semicolon_segments(line);
+            let valid_header = segments
+                .first()
+                .is_some_and(|tokens| tokens.len() == 3 && tokens[0].text == "CC");
+
+            if !valid_header {
+                diagnostics.push(Diagnostic::new(
+                    "malformed-composite-line",
+                    "expected 'CC name count ; PCC piece dx dy ; ...' inside the Composites table".to_string(),
+                    line_no,
+                    1,
+                    line.trim_end().len().max(1),
+                ));
+                continue;
+            }
+
+            actual_composite_count += 1;
+
+            let header = &segments[0];
+            let name = header[1].text;
+            let declared_parts = header[2].text.parse::<usize>().ok();
+
+            if declared_parts.is_none() {
+                diagnostics.push(Diagnostic::new(
+                    "malformed-composite-line",
+                    format!("composite part count '{}' is not a number", header[2].text),
+                    line_no,
+                    header[2].col,
+                    header[2].text.len(),
+                ));
+            }
+
+            if let Some(&first_line) = seen_composites.get(name) {
+                diagnostics.push(Diagnostic::new(
+                    "duplicate-composite",
+                    format!("composite glyph '{}' already defined on line {}", name, first_line),
+                    line_no,
+                    header[1].col,
+                    name.len(),
+                ));
+            } else {
+                seen_composites.insert(name.to_string(), line_no);
+            }
+
+            if !known_glyph_names.is_empty() && !known_glyph_names.contains_key(name) {
+                diagnostics.push(Diagnostic::new(
+                    "undefined-composite-glyph",
+                    format!("composite glyph '{}' is not defined in CharMetrics", name),
+                    line_no,
+                    header[1].col,
+                    name.len(),
+                ));
+            }
+
+            let mut actual_parts = 0usize;
+            for part in &segments[1..] {
+                if part.len() != 4 || part[0].text != "PCC" {
+                    let first = part.first();
+                    let last = part.last();
+                    let col = first.map(|t| t.col).unwrap_or(1);
+                    let span_len = match (first, last) {
+                        (Some(first), Some(last)) => {
+                            (last.col + last.text.len()).saturating_sub(first.col).max(1)
+                        }
+                        _ => 1,
+                    };
+                    diagnostics.push(Diagnostic::new(
+                        "malformed-composite-part",
+                        "expected 'PCC piece dx dy' inside a composite entry".to_string(),
+                        line_no,
+                        col,
+                        span_len,
+                    ));
+                    continue;
+                }
+
+                actual_parts += 1;
+
+                let piece_name = part[1].text;
+                let dx = &part[2];
+                let dy = &part[3];
+
+                if dx.text.parse::<f64>().is_err() {
+                    diagnostics.push(Diagnostic::new(
+                        "malformed-composite-part",
+                        format!("composite x-displacement '{}' is not a number", dx.text),
+                        line_no,
+                        dx.col,
+                        dx.text.len(),
+                    ));
+                }
+                if dy.text.parse::<f64>().is_err() {
+                    diagnostics.push(Diagnostic::new(
+                        "malformed-composite-part",
+                        format!("composite y-displacement '{}' is not a number", dy.text),
+                        line_no,
+                        dy.col,
+                        dy.text.len(),
+                    ));
+                }
+
+                if !known_glyph_names.is_empty() && !known_glyph_names.contains_key(piece_name) {
+                    diagnostics.push(Diagnostic::new(
+                        "undefined-composite-glyph",
+                        format!("composite piece references undefined glyph name '{}'", piece_name),
+                        line_no,
+                        part[1].col,
+                        piece_name.len(),
+                    ));
+                }
+            }
+
+            if let Some(declared) = declared_parts {
+                if declared != actual_parts {
+                    diagnostics.push(Diagnostic::new(
+                        "composite-part-count-mismatch",
+                        format!(
+                            "CC {} declares {} parts but {} PCC entries were found",
+                            name, declared, actual_parts
+                        ),
+                        line_no,
+                        header[2].col,
+                        header[2].text.len(),
                     ));
                 }
             }

@@ -83,3 +83,28 @@ pub fn parse_tokens(line: &str) -> Vec<Token> {
 
     tokens
 }
+
+// Composites lines look like:
+//   CC Aacute 2 ; PCC A 0 0 ; PCC acute 130 0 ;
+// i.e. semicolon-separated segments like CharMetrics, but each segment is
+// itself a group of whitespace-separated tokens rather than a single key
+// and value. This splits a line into those segments and tokenizes each
+// one, keeping token columns absolute within the original line so callers
+// can point a diagnostic at any individual piece name or number.
+pub fn parse_semicolon_segments(line: &str) -> Vec<Vec<Token>> {
+    let mut segments = Vec::new();
+    let mut byte_offset = 0usize;
+
+    for raw_segment in line.split(';') {
+        let tokens: Vec<Token> = parse_tokens(raw_segment)
+            .into_iter()
+            .map(|t| Token { text: t.text, col: t.col + byte_offset })
+            .collect();
+        if !tokens.is_empty() {
+            segments.push(tokens);
+        }
+        byte_offset += raw_segment.len() + 1; // +1 accounts for the ';' split() consumed
+    }
+
+    segments
+}
