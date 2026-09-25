@@ -40,6 +40,16 @@ found 2 problems
 Exit code is 1 if any problems were found, 0 otherwise, so it's usable
 as a CI check on generated or vendored font metrics.
 
+## Testing
+
+```
+cargo test
+```
+
+`tests/lint_tests.rs` runs the linter against the fixture files under
+`tests/fixtures/`, one small `.afm` file per rule (or small group of
+related rules), and checks that the expected diagnostic codes show up.
+
 ## What it checks right now
 
 - required header keys (`FontName`, `FontBBox`, `Ascender`, `Descender`)

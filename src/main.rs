@@ -1,7 +1,4 @@
-mod diagnostic;
-mod lint;
-mod parser;
-
+use afm_lint::lint;
 use std::env;
 use std::fs;
 use std::process::ExitCode;

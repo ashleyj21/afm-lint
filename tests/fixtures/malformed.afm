@@ -1,0 +1,16 @@
+StartFontMetrics 4.1
+FontName Helvetica
+FontBBox -166 -225 1000 931
+Ascender 718
+Descender -207
+StartCharMetrics 1
+junk
+EndCharMetrics
+StartKernPairs 2
+KPX A
+KPX A B nonnum
+EndKernPairs
+StartComposites 1
+not a composite line
+EndComposites
+EndFontMetrics

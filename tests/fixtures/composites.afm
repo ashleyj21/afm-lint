@@ -1,0 +1,14 @@
+StartFontMetrics 4.1
+FontName Helvetica
+FontBBox -166 -225 1000 931
+Ascender 718
+Descender -207
+StartCharMetrics 2
+C 65 ; WX 722 ; N A ;
+C 194 ; WX 722 ; N acute ;
+EndCharMetrics
+StartComposites 2
+CC Aacute 2 ; PCC A 0 0 ; PCC acute 130 0 ;
+CC Aacute 2 ; PCC A 0 0 ; PCC acute 130 0 ;
+EndComposites
+EndFontMetrics
